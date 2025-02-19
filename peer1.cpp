@@ -181,6 +181,7 @@ int main() {
             if (ret > 0) {
                 printf("%s\n", buffer);
             }
+            else perror("recvfrom()");
         }   
         break;
         
