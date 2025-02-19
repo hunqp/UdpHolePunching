@@ -2,10 +2,10 @@
 #include "json.hpp"
 #include "STUNExternalIP.h"
 
-#define configPEER_NAME          (char *)"Peer0"
-#define configPEER_PORT          50001
-#define configSUBSCRIBE_TOPIC    (char *)"CreatePeerConnection0"
-#define configPUBLISH_TOPIC      (char *)"CreatePeerConnection1"
+#define configPEER_NAME          (char *)"HoChiMinh"
+#define configPEER_PORT          18686
+#define configSUBSCRIBE_TOPIC    (char *)"CREATE_PEER_CONNECTION_HCM"
+#define configPUBLISH_TOPIC      (char *)"CREATE_PEER_CONNECTION_HN"
 
 static bool bLoop = true;
 
@@ -14,13 +14,13 @@ static PeerConnection anotherPeer;
 
 static void sigProc(int sig) {
     bLoop = false;
-    printf("Caught signal %d\n", sig);
+    printf("[CAUGHT] Signal %d\n", sig);
+    exit(EXIT_SUCCESS);
 }
 
 static void onSignalingMessage(struct mosquitto *mosq, void *arg, const struct mosquitto_message *message) {
-    printf("Received message: %s\n", (char *)message->payload);
-
     nlohmann::json JSON = nlohmann::json::parse((char *)message->payload);
+
     try {
         int port = JSON["port"].get<int>();
         int state = JSON["state"].get<int>();
@@ -32,12 +32,32 @@ static void onSignalingMessage(struct mosquitto *mosq, void *arg, const struct m
             strcpy(anotherPeer.publicIP, ip.c_str());
             anotherPeer.port = port;
             anotherPeer.state = STATE_GATHERING;
+
+            printf("[CREATE] Peer connection %s [%s:%d]\n", anotherPeer.name, anotherPeer.publicIP, anotherPeer.port);
         }
     }
     catch(const std::exception& e) {
         printf("%s\n", e.what());
     }
     
+}
+
+static void * alwaysPublishMessage(void *arg) {
+    const nlohmann::json JSON = {
+        {"port" , ourPeer.port                  },
+        {"name" , std::string(ourPeer.name)     },
+        {"ip"   , std::string(ourPeer.publicIP) },
+        {"state", ourPeer.state                 }
+    };
+    struct mosquitto *mosq = (struct mosquitto *)arg;
+    
+    while (bLoop) {
+        mosquitto_publish(mosq, NULL, configPUBLISH_TOPIC, JSON.dump().length(), JSON.dump().c_str(), 0, 0);
+        sleep(1);
+    }
+
+    pthread_detach(pthread_self());
+    return NULL;
 }
 
 int main() {
@@ -77,7 +97,7 @@ int main() {
     struct sockaddr_in addr;
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd) {
+    if (fd < 0) {
         printf("Can't create UDP socket\n");
         exit(EXIT_FAILURE);
     }
@@ -86,8 +106,13 @@ int main() {
     addr.sin_port = htons(configPEER_PORT);
     addr.sin_addr.s_addr = INADDR_ANY;
 
+    struct timeval timeoutIn5Secs;
+    timeoutIn5Secs.tv_sec = 5;
+    timeoutIn5Secs.tv_usec = 0;
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeoutIn5Secs, sizeof(timeoutIn5Secs));
+
     if (bind(fd, (const struct sockaddr *)&addr, (socklen_t)sizeof(addr))) {
-        printf("Can't bind UDP socket on port %d\n", configPEER_PORT);
+        printf("Can't bind UDP socket on port %d\n", ourPeer.port);
         exit(EXIT_FAILURE);
     }
 
@@ -96,13 +121,13 @@ int main() {
         configSTUNPORT
     };
     
-    int ret = getPublicIPAddress(STUN, ourPeer.publicIP, configPEER_PORT);
-    if (ret == 0) {
+    int ret = getPublicIPAddress(STUN, ourPeer.publicIP);
+    if (ret != 0) {
         printf("Can't get IP Public address from %s:%d\n", configSTUNSERVER, configSTUNPORT);
         exit(EXIT_FAILURE);
     }
 
-    printf("-- PEER CONNECTION --\n");
+    printf("-- PEER ENTRY --\n");
     printf("Name             : %s\n", ourPeer.name);
     printf("Port             : %d\n", ourPeer.port);
     printf("Public IP address: %s\n", ourPeer.publicIP);
@@ -111,57 +136,58 @@ int main() {
     socklen_t anotherPeerAddressLen = sizeof(anotherPeerAddress);
     memset(&anotherPeerAddress, 0, sizeof(anotherPeerAddress));
 
+    pthread_t createId;
+    pthread_create(&createId, NULL, alwaysPublishMessage, mosq);
+
     while (bLoop) {
         switch (anotherPeer.state) {
         case STATE_WAITING: {
-            const nlohmann::json JSON = {
-                {"port" , ourPeer.port                  },
-                {"name" , std::string(ourPeer.name)     },
-                {"ip"   , std::string(ourPeer.publicIP) },
-                {"state", ourPeer.state                 }
-            };
-            mosquitto_publish(mosq, NULL, configPUBLISH_TOPIC, JSON.dump().length(), JSON.dump().c_str(), 0, 0);
-            sleep(1);
+            printf("[STATE_WAITING] Wait for another peer\n");
         }
         break;
     
         case STATE_GATHERING: {
             char buffer[512];
-            const char *CMD = (const char *)"UDP_HOLE_PUNCHING";
+            static int counter = 0;
+
+            printf("[STATE_GATHERING] CONNECTING %s [%s:%d]\n", anotherPeer.name, anotherPeer.publicIP, anotherPeer.port);
 
             memset(buffer, 0, sizeof(buffer));
             anotherPeerAddress.sin_family = AF_INET;
             anotherPeerAddress.sin_addr.s_addr = inet_addr(anotherPeer.publicIP);
             anotherPeerAddress.sin_port = htons(anotherPeer.port);
-            sendto(fd, CMD, strlen(CMD), 0, (struct sockaddr *)&anotherPeerAddress, anotherPeerAddressLen);
+            sendto(fd, configCOMMON_CMD, strlen(configCOMMON_CMD), 0, (struct sockaddr *)&anotherPeerAddress, anotherPeerAddressLen);
+
             int ret = recvfrom(fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&anotherPeerAddress, &anotherPeerAddressLen);
             if (ret > 0) {
-                if (strcmp(buffer, CMD) == 0) {
+                if (strcmp(buffer, configCOMMON_CMD) == 0) {
                     anotherPeer.state = STATE_CONNECTED;
-                    printf("UDP Hole Punching is completed\r\n");
                 }
             }
-            else {
-                printf("UDP Hole Punching is trying ...\r\n");
-                sleep(1);
-            }
+            else (++counter);
 
+            printf("[STATE_GATHERING] UDP HOLE PUNCHING %s [%d]\n", (anotherPeer.state = STATE_CONNECTED) ? "COMPLETED" : "FAILURE", counter);
         }
         break;
 
         case STATE_CONNECTED: {
-            // char buffer[512];
-            // memset(buffer, 0, sizeof(buffer));
-            // recvfrom(fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&anotherPeerAddress, &anotherPeerAddressLen);
-            // printf("Message from %s (%s:%d): %s\n", anotherPeer.name, anotherPeer.publicIP, anotherPeer.port, buffer);
+            char buffer[512];
+            memset(buffer, 0, sizeof(buffer));
+            snprintf(buffer, sizeof(buffer), "Message from %s [%s:%d]\n", ourPeer.name, ourPeer.publicIP, ourPeer.port);
+            sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr *)&anotherPeerAddress, anotherPeerAddressLen);
 
-            printf("STATE_CONNECTED\r\n");
+            memset(buffer, 0, sizeof(buffer));
+            int ret = recvfrom(fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&anotherPeerAddress, &anotherPeerAddressLen);
+            if (ret > 0) {
+                printf("%s\n", buffer);
+            }
         }   
         break;
         
         default:
         break;
         }
+
         sleep(1);
     }
 

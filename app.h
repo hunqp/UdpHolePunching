@@ -22,6 +22,8 @@
 #define configSTUNSERVER        (char*)"stun.l.google.com"
 #define configSTUNPORT          19302
 
+#define configCOMMON_CMD        (char*)"UDP_HOLE_PUNCHING"
+
 enum {
     STATE_WAITING,
     STATE_GATHERING,

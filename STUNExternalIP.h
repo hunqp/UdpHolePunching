@@ -31,6 +31,6 @@ struct STUNServer
 ///          -4 if failed to read from the socket (and timed out; default = 5s);
 ///          -5 if failed to get the external address.
 ///
-int getPublicIPAddress(struct STUNServer server, char *address, int port);
+int getPublicIPAddress(struct STUNServer server, char *address);
 
 #endif /* STUNExternalIP_h */

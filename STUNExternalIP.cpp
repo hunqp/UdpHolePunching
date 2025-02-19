@@ -77,7 +77,7 @@ struct STUNXORMappedIPv4Address
 ///          -4 if failed to read from the socket (and timed out; default = 5s);
 ///          -5 if failed to get the external address.
 ///
-int getPublicIPAddress(struct STUNServer server, char *address, int port)
+int getPublicIPAddress(struct STUNServer server, char *address)
 {
     // Create a UDP socket
     int socketd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -91,7 +91,7 @@ int getPublicIPAddress(struct STUNServer server, char *address, int port)
 
     localAddress->sin_addr.s_addr = INADDR_ANY;
 
-    localAddress->sin_port = htons(port);
+    localAddress->sin_port = htons(0);
 
     if (bind(socketd, (struct sockaddr *)localAddress, sizeof(struct sockaddr_in)) < 0)
     {
