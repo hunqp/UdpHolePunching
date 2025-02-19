@@ -22,13 +22,17 @@ static void onSignalingMessage(struct mosquitto *mosq, void *arg, const struct m
 
     nlohmann::json JSON = nlohmann::json::parse((char *)message->payload);
     try {
+        int port = JSON["port"].get<int>();
         int state = JSON["state"].get<int>();
         std::string ip = JSON["ip"].get<std::string>();
         std::string name = JSON["name"].get<std::string>();
-        std::string port = JSON["port"].get<std::string>();
 
-        strcpy(anotherPeer.name, name.c_str());
-
+        if (anotherPeer.state == STATE_WAITING) {
+            strcpy(anotherPeer.name, name.c_str());
+            strcpy(anotherPeer.publicIP, ip.c_str());
+            anotherPeer.port = port;
+            anotherPeer.state = STATE_GATHERING;
+        }
     }
     catch(const std::exception& e) {
         printf("%s\n", e.what());
@@ -45,6 +49,8 @@ int main() {
     ourPeer.port = configPEER_PORT;
     ourPeer.state = STATE_WAITING;
     strncpy(ourPeer.name, configPEER_NAME, sizeof(ourPeer.name));
+
+    anotherPeer.state = STATE_WAITING;
 
     ////////////////////////////// CONNECT TO SIGNALING SERVER //////////////////////////////
     struct mosquitto *mosq = NULL;
@@ -106,7 +112,7 @@ int main() {
     memset(&anotherPeerAddress, 0, sizeof(anotherPeerAddress));
 
     while (bLoop) {
-        switch (ourPeer.state) {
+        switch (anotherPeer.state) {
         case STATE_WAITING: {
             const nlohmann::json JSON = {
                 {"port" , ourPeer.port                  },
@@ -120,16 +126,36 @@ int main() {
         break;
     
         case STATE_GATHERING: {
-            const char *msg = (const char *)"UDP Hole Punching";
-            sendto(fd, msg, strlen(msg), 0, (struct sockaddr *)&anotherPeerAddress, anotherPeerAddressLen);
+            char buffer[512];
+            const char *CMD = (const char *)"UDP_HOLE_PUNCHING";
+
+            memset(buffer, 0, sizeof(buffer));
+            anotherPeerAddress.sin_family = AF_INET;
+            anotherPeerAddress.sin_addr.s_addr = inet_addr(anotherPeer.publicIP);
+            anotherPeerAddress.sin_port = htons(anotherPeer.port);
+            sendto(fd, CMD, strlen(CMD), 0, (struct sockaddr *)&anotherPeerAddress, anotherPeerAddressLen);
+            int ret = recvfrom(fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&anotherPeerAddress, &anotherPeerAddressLen);
+            if (ret > 0) {
+                if (strcmp(buffer, CMD) == 0) {
+                    anotherPeer.state = STATE_CONNECTED;
+                    printf("UDP Hole Punching is completed\r\n");
+                }
+            }
+            else {
+                printf("UDP Hole Punching is trying ...\r\n");
+                sleep(1);
+            }
+
         }
         break;
 
         case STATE_CONNECTED: {
-            char buffer[512];
-            memset(buffer, 0, sizeof(buffer));
-            recvfrom(fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&anotherPeerAddress, &anotherPeerAddressLen);
-            printf("Message from %s (%s:%d): %s\n", anotherPeer.name, anotherPeer.publicIP, anotherPeer.port, buffer);
+            // char buffer[512];
+            // memset(buffer, 0, sizeof(buffer));
+            // recvfrom(fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&anotherPeerAddress, &anotherPeerAddressLen);
+            // printf("Message from %s (%s:%d): %s\n", anotherPeer.name, anotherPeer.publicIP, anotherPeer.port, buffer);
+
+            printf("STATE_CONNECTED\r\n");
         }   
         break;
         
