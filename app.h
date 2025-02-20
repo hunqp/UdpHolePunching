@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <ifaddrs.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -22,7 +23,7 @@
 #define configSTUNSERVER        (char*)"stun.l.google.com"
 #define configSTUNPORT          19302
 
-#define configCOMMON_CMD        (char*)"UDP_HOLE_PUNCHING"
+#define configPUNCHING_CMD        (char*)"UDP_HOLE_PUNCHING"
 
 enum {
     STATE_WAITING,
@@ -33,8 +34,9 @@ enum {
 typedef struct {
     int port;
     int state;
-    char publicIP[16];
+    char priIp[16];
+    char pubIp[16];
     char name[32];
-} PeerConnection;
+} PeerCandidate;
 
 #endif /* _APP_H_ */
