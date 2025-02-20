@@ -63,6 +63,7 @@ static void * alwaysPublishMessage(void *arg) {
     return NULL;
 }
 
+/* Code generate by ChatGPT, disclaimer if it wrong */
 static int getPrivateIPAddress(char buffer[]) {
     struct ifaddrs *interfaceaddr, *ifaddress;
     char ip[INET_ADDRSTRLEN];
