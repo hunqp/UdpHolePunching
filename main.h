@@ -7,12 +7,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <ifaddrs.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
-#include <netinet/in.h>
-#include <time.h>
-#include <netdb.h>
+#include <sys/socket.h>
 
 #include <mosquitto.h>
 #include <mosquittopp.h>
@@ -23,7 +19,7 @@
 #define configSTUNSERVER        (char*)"stun.l.google.com"
 #define configSTUNPORT          19302
 
-#define configPUNCHING_CMD        (char*)"UDP_HOLE_PUNCHING"
+#define configPUNCHING_CMD      (char*)"UDP_HOLE_PUNCHING"
 
 enum {
     STATE_WAITING,
@@ -34,9 +30,13 @@ enum {
 typedef struct {
     int port;
     int state;
-    char priIp[16];
-    char pubIp[16];
+    char PriIP[16];
+    char PubIP[16];
     char name[32];
 } PeerCandidate;
+
+#define LOGP(fmt, ...)  printf(fmt, ##__VA_ARGS__)
+#define LOGD(fmt, ...)  printf("\x1B[34m""\e[3m" fmt "\x1B[0m", ##__VA_ARGS__)
+#define LOGE(fmt, ...)  printf("\x1B[31m" fmt "\x1B[0m", ##__VA_ARGS__)
 
 #endif /* _APP_H_ */
