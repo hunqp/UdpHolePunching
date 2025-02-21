@@ -16,13 +16,13 @@
    
 ### 2. **Lấy Địa Chỉ IP Public Qua STUN**
    - Mỗi peer truy vấn máy chủ STUN để xác định địa chỉ IP Public và Port Public của nó.
-   - Router sex tạm thời giữ cổng công mở trong một khoảng thời gian ngắn sau yêu cầu này, cho phép các gói tin đến từ cùng một điểm bên ngoài.
+   - Router sẽ tạm thời giữ Port Public này trong một khoảng thời gian ngắn sau yêu cầu này, cho phép các gói tin đến từ cùng một điểm bên ngoài.
 
 ### 3. **Tạo Socket UDP**
-   - Mỗi peer khởi tạo một socket UDP trên cổng cục bộ của nó.
+   - Mỗi peer khởi tạo một socket UDP trên Port Local của nó.
 
 ### 4. **Trao đổi thông tin Candidate**
-   - Các peer kết nối tới máy chủ MQTT và trao đổi thông tin kết nối của chúng (IP Public và Port Public) lên một TOPIC được chỉ định trước.
+   - Các peer kết nối tới máy chủ MQTT và trao đổi thông tin kết nối của chúng (IP Public/Private và Port Public/Private) lên một TOPIC được chỉ định trước.
 
 ### 5. **Gathering Candidate**
    - Mỗi peer nhận thông tin kết nối của peer còn lại.
