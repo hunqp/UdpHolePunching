@@ -1,51 +1,47 @@
 # Kết Nối P2P qua UDP Hole Punching
 
-## Tổng Quan
+## Summary
 
-**UDP Hole Punching** là một kỹ thuật được sử dụng để thiết lập kết nối trực tiếp peer-to-peer (P2P) giữa các thiết bị phía sau NAT (Network Address Translation). Phương pháp này cho phép các peer giao tiếp mà không cần phải có địa chỉ IP công khai trực tiếp.
+**UDP Hole Punching** là một kỹ thuật được sử dụng để thiết lập kết nối trực tiếp peer-to-peer (P2P) giữa các thiết bị phía sau NAT (Network Address Translation). Phương pháp này cho phép các peer giao tiếp trực tiếp với nhau mà không cần phải qua server trung gian nào khác.
 
-## Server Sử Dụng
+## Server Usage
 
 - **Máy chủ Signaling**: `broker.emqx.io:1883`
 - **Máy chủ STUN**: `stun.l.google.com:19302`
 
-## Mô Tả
+## Description
 
 ### 1. **Signaling qua MQTT**
-   - Các peer sử dụng MQTT như một cơ chế signaling để trao đổi thông tin kết nối.
-   
-### 2. **Lấy Địa Chỉ IP Public Qua STUN**
-   - Mỗi peer truy vấn máy chủ STUN để xác định địa chỉ IP Public và Port Public của nó.
-   - Router sẽ tạm thời giữ Port Public này trong một khoảng thời gian ngắn sau yêu cầu này, cho phép các gói tin đến từ cùng một điểm bên ngoài.
+   - Sử dụng MQTT cho cơ chế signaling để trao đổi **Candidate** giữa các thiết bị.
 
-### 3. **Tạo Socket UDP**
-   - Mỗi peer khởi tạo một socket UDP trên Port Local của nó.
+### 2. **STUN Protocol**   
+   - Lấy **IP_PUBLIC** và mở **PORT_PUBLIC** thông qua việc gửi query tới **STUN SEVER**. Router sẽ tạm thời giữ **PORT_PUBLIC** này trong một khoảng thời gian ngắn.
+   - Việc sử dụng **STUN** rất quan trọng cho UDP Hole Punchinig, thiết bị Behind NAT sẽ mapped **PORT_LOCAL** của nó vào **PORT_PUBLIC** này để gửi message tới thiết bị khác Behind NAT.
 
-### 4. **Trao đổi thông tin Candidate**
-   - Các peer kết nối tới máy chủ MQTT và trao đổi thông tin kết nối của chúng (IP Public/Private và Port Public/Private) lên một TOPIC được chỉ định trước.
-
-### 5. **Gathering Candidate**
-   - Mỗi peer nhận thông tin kết nối của peer còn lại.
+### 3. **Gathering Candidate**
    - Quá trình thiết lập kết nối phụ thuộc vào:
-     - **Trường hợp 1**: Cả hai peer đều ở sau cùng một NAT và trên cùng một máy.
-     - **Trường hợp 2**: Cả hai peer đều ở sau cùng một NAT nhưng trên các máy khác nhau trong cùng một mạng nội bộ.
-     - **Trường hợp 3**: Các peer ở sau các NAT khác nhau, yêu cầu mỗi peer phải mapped cổng cục bộ của mình vào cổng công đã nhận từ máy chủ STUN.
+     - **Case 1**: Cả hai thiết bị đều ở sau cùng một NAT và trên cùng một máy chủ.
+     - **Case 2**: Cả hai thiết bị đều ở sau cùng một NAT nhưng trên các máy khác nhau trong cùng một mạng nội bộ.
+     - **Case 3**: Cả hai thiết bị đều ở sau hai NAT khác nhau, yêu cầu mỗi thiết bị phải **mapped** **PORT_LOCAL** của bản thân vào **PORT_PUBLIC**.
      
-### 6. **UDP Hole Punching**
-   - Sau khi các peer trao đổi thông tin kết nối và nhận được các message, các peer gửi/nhận message qua các cổng đã mapped.
-   - Quá trình hole punching thiết lập một kết nối UDP trực tiếp giữa các peer.
+### 4. **UDP Hole Punching**
+   - Các thiết bị sẽ bắt đầu gửi/nhận message dựa trên các **Candidate** đã nhận được từ phía còn lại.
 
-## Cách Chạy
+## How to use ?
 
 Để chạy ứng dụng, chỉ cần thực hiện lệnh sau:
-
-```bash
-make
-```
-Chương trình sau khi xây dựng bao gồm Peer1 và Peer2 có thể chạy với 3 trường hợp thử nghiệm
-    - Chạy trên cùng một máy Linux trên hai terminal.
-    - Chạy trên hai máy Linux kết nối với cùng một mạng.
-    - Chạy trên hai máy Linux nằm trên các nhà cung cấp dịch vụ Internet khác nhau.
+- Install dependency
+  ```
+  sudo apt install libmosquitto-dev
+  ```
+ - Build
+   ```bash
+   make
+   ```
+Chương trình sau khi build bao gồm 2 application **Peer1** và **Peer2** có thể chạy với 3 test case:
+- Chạy trên cùng một máy Linux trên hai terminal.
+- Chạy trên hai máy Linux kết nối với cùng một mạng.
+- Chạy trên hai máy Linux nằm trên các nhà cung cấp dịch vụ Internet khác nhau.
 
 ## Reference
-[P2P-NAT](https://bford.info/pub/net/p2pnat)
+ - [P2P-NAT](https://bford.info/pub/net/p2pnat)

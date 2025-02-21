@@ -220,13 +220,13 @@ int main() {
             }
             else (++counter);
 
-            LOGD("[STATE_GATHERING] UDP HOLE PUNCHING %s [TRY %d]\n", (anotherPeer.state == STATE_CONNECTED) ? "COMPLETED" : "FAILURE", counter);
+            LOGD("[STATE_GATHERING] UDP HOLE PUNCHING %s [AFTER TRY %d]\n", (anotherPeer.state == STATE_CONNECTED) ? "COMPLETED" : "FAILURE", counter);
         }
         break;
 
         case STATE_CONNECTED: {
             memset(buffer, 0, sizeof(buffer));
-            snprintf(buffer, sizeof(buffer), "[CONNECTED] Message from %s [%s:%d]", ourPeer.name, ourPeer.PubIP, ourPeer.port);
+            snprintf(buffer, sizeof(buffer), "[PING] Message from %s [%s:%d]", ourPeer.name, ourPeer.PubIP, ourPeer.port);
             sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr *)&anotherPeerAddress, anotherPeerAddressLen);
 
             memset(buffer, 0, sizeof(buffer));
