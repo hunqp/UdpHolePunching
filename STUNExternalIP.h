@@ -11,6 +11,11 @@
 #ifndef STUNExternalIP_h
 #define STUNExternalIP_h
 
+#ifdef __cplusplus
+extern "C" 
+{
+#endif
+
 struct STUNServer
 {
     char *address;
@@ -32,5 +37,9 @@ struct STUNServer
 ///          -5 if failed to get the external address.
 ///
 int getPublicIPAddress(struct STUNServer server, char *address);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* STUNExternalIP_h */

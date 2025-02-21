@@ -32,6 +32,7 @@
 Để chạy ứng dụng, chỉ cần thực hiện lệnh sau:
 - Install dependency
   ```
+  sudo apt update
   sudo apt install libmosquitto-dev
   ```
  - Build

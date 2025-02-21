@@ -157,8 +157,6 @@ int getPublicIPAddress(struct STUNServer server, char *address)
 
     remoteAddress->sin_port = htons(server.port);
 
-    printf("Server Port: %d\n", server.port);
-
     // Construct a STUN request
     struct STUNMessageHeader *request = (struct STUNMessageHeader *)malloc(sizeof(struct STUNMessageHeader));
 

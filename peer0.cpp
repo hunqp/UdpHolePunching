@@ -226,7 +226,7 @@ int main() {
 
         case STATE_CONNECTED: {
             memset(buffer, 0, sizeof(buffer));
-            snprintf(buffer, sizeof(buffer), "[PING] Message from %s [%s:%d]", ourPeer.name, ourPeer.PubIP, ourPeer.port);
+            snprintf(buffer, sizeof(buffer), "\x1B[32m [PING] Message from %s [%s:%d] \x1B[0m", ourPeer.name, ourPeer.PubIP, ourPeer.port);
             sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr *)&anotherPeerAddress, anotherPeerAddressLen);
 
             memset(buffer, 0, sizeof(buffer));
