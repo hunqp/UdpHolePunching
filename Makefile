@@ -1,9 +1,14 @@
+PUBLISHER = Publisher
+SUBSCRIBER = Subscriber
+
 all:
-	g++ -c peer0.cpp -o peer0.o
-	g++ -c peer1.cpp -o peer1.o
+	g++ -c ults.cpp -o ults.o
+	g++ -c publisher.cpp -o publisher.o
+	g++ -c subscriber.cpp -o subscriber.o
 	gcc -c STUNExternalIP.c -o STUNExternalIP.o
-	g++ peer0.o STUNExternalIP.o -o Peer0 -I. -lpthread -lmosquitto -lrt
-	g++ peer1.o STUNExternalIP.o -o Peer1 -I. -lpthread -lmosquitto -lrt
+	g++ -c peerconnection.cpp -o peerconnection.o
+	g++ publisher.o STUNExternalIP.o peerconnection.o ults.o -o $(PUBLISHER) -I. -lpthread -lmosquitto -lrt
+	g++ subscriber.o STUNExternalIP.o peerconnection.o ults.o -o $(SUBSCRIBER) -I. -lpthread -lmosquitto -lrt
 
 clean:
-	rm -rf *.o Peer1 Peer0
+	rm -rf *.o $(PUBLISHER) $(SUBSCRIBER)
